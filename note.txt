@@ -1,1 +1,5 @@
-Developing Navbar
+Developing Resume card
+
+A placeholder was used just inplace of real data int the contants index.ts, then the types of the data was explained because of typescript to avoid errors in index.d.ts iat types folder.
+Resume card component was created to display the resume on the the homescreen 
+Score circle was created to give the ats score, we used this component in resumeCard component. 
