@@ -92,12 +92,15 @@ const Upload = () => {
 
     //if we dont get feedback
     if (!feedback)
-      return setStatusText("Error: Failed to get AI analysis. Please try again.");
+      return setStatusText(
+        "Error: Failed to get AI analysis. Please try again."
+      );
 
     //if we got a fedback then we extract the feedback text
-    const feedbackText = typeof feedback.message.content === "string"
-      ? feedback.message.content
-      : feedback.message.content[0].text;
+    const feedbackText =
+      typeof feedback.message.content === "string"
+        ? feedback.message.content
+        : feedback.message.content[0].text;
 
     //parsing the feedback text to json
     data.feedback = JSON.parse(feedbackText);
@@ -107,7 +110,9 @@ const Upload = () => {
 
     //Status update
     setStatusText("Analysis complete! Redirecting...");
-    console.log( data);
+    console.log(data);
+    //redirecting to resume page with the uuid
+    navigate(`/resume/${uuid}`);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -123,8 +128,6 @@ const Upload = () => {
     if (!file) return;
 
     handleAnalyze({ companyName, jobTitle, jobDescription, file });
-
-   
   };
   return (
     <main className="bg-[url('/images/bg-main.svg')] bg-no-repeat bg-cover">
