@@ -7,6 +7,17 @@ import { convertPdfToImage } from "~/lib/pdf2img";
 import { usePuterStore } from "~/lib/puter";
 import { generateUUID } from "~/lib/utils";
 
+interface AIResponse {
+  success?: boolean;
+  error?: {
+    message: string;
+  };
+  message?: {
+    role: string;
+    content: string | Array<{ text: string }>;
+  };
+}
+
 const Upload = () => {
   const { auth, isLoading, fs, ai, kv } = usePuterStore();
   const navigate = useNavigate();
@@ -15,7 +26,6 @@ const Upload = () => {
   const [file, setFile] = useState<File | null>(null);
 
   const handleFileSelect = (file: File | null) => {
-    // Handle file selection logic here
     setFile(file);
   };
 
@@ -32,103 +42,116 @@ const Upload = () => {
   }) => {
     setIsProcessing(true);
     setStatusText("Analyzing your resume...");
-    //upload the file to puter storage
-    const uploadFile = await fs.upload([file]);
-    //if there is no uploaded file
-    if (!uploadFile)
-      return setStatusText("Error: Failed to upload file. Please try again.");
-    //if we have a file we convert
-    setStatusText("Converting to Image...");
-    const imageFile = await convertPdfToImage(file);
+    try {
+      // Upload the file to puter storage
+      const uploadFile = await fs.upload([file]);
+      if (!uploadFile) {
+        throw new Error("Failed to upload file.");
+      }
 
-    //check if imag file exist
-    if (!imageFile.file)
-      return setStatusText(
-        "Error: Failed to convert PDF to image. Please try again."
-      );
+      setStatusText("Converting to Image...");
+      const imageFile = await convertPdfToImage(file);
+      if (!imageFile.file) {
+        throw new Error("Failed to convert PDF to image.");
+      }
 
-    //updating the status
-    setStatusText("Uploading Image...");
+      setStatusText("Uploading Image...");
+      const uploadedImage = await fs.upload([imageFile.file]);
+      if (!uploadedImage) {
+        throw new Error("Failed to upload image.");
+      }
 
-    //upload image to puter storage
-    const uploadedImage = await fs.upload([imageFile.file]);
-
-    //check if we have uploaded image
-    if (!uploadedImage)
-      return setStatusText("Error: Failed to upload image. Please try again.");
-
-    //update status
-    setStatusText("Getting AI Analysis...");
-
-    //generate uuid for Ai Analysis
-    const uuid = generateUUID();
-
-    //formating all the data using uuid
-    const data = {
-      id: uuid,
-      resumePath: uploadFile.path,
-      imagePath: uploadedImage.path,
-      companyName,
-      jobTitle,
-      jobDescription,
-      feedback: "",
-    };
-
-    //saving the formatted data on puter storage
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
-
-    //Status update
-    setStatusText("Getting AI Analysis...");
-
-    //getting AI analysis
-    const feedback = await ai.feedback(
-      uploadFile.path,
-      prepareInstructions({
+      setStatusText("Getting AI Analysis...");
+      const uuid = generateUUID();
+      const data = {
+        id: uuid,
+        resumePath: uploadFile.path,
+        imagePath: uploadedImage.path,
+        companyName,
         jobTitle,
         jobDescription,
-        AIResponseFormat: "JSON",
-      })
-    );
+        feedback: "",
+      };
+      await kv.set(`resume:${uuid}`, JSON.stringify(data));
 
-    //if we dont get feedback
-    if (!feedback)
-      return setStatusText(
-        "Error: Failed to get AI analysis. Please try again."
-      );
+      // AI feedback call with error handling
+      let feedbackResponse: AIResponse | undefined;
+      try {
+        feedbackResponse = await ai.feedback(
+          uploadFile.path,
+          prepareInstructions({
+            jobTitle,
+            jobDescription,
+            AIResponseFormat: "JSON",
+          })
+        );
+      } catch (apiError: unknown) {
+        let apiErrorMessage = "Failed to get AI response. This may be due to usage limits on the Puter AI service.";
+        if (apiError instanceof Error) {
+          apiErrorMessage = apiError.message;
+        } else if (typeof apiError === 'string') {
+          apiErrorMessage = apiError;
+        }
+        console.error("AI API error:", apiError);
+        throw new Error(apiErrorMessage);
+      }
 
-    //if we got a fedback then we extract the feedback text
-    const feedbackText =
-      typeof feedback.message.content === "string"
-        ? feedback.message.content
-        : feedback.message.content[0].text;
+      if (!feedbackResponse) {
+        let responseErrorMessage = "AI analysis returned no response. This may be due to usage limits.";
+        console.error("AI feedback failed: No response");
+        throw new Error(responseErrorMessage);
+      }
 
-    //parsing the feedback text to json
-    data.feedback = JSON.parse(feedbackText);
+      // Check if the response indicates failure
+      if (feedbackResponse.success === false) {
+        let responseErrorMessage = "AI analysis returned an error. This may be due to usage limits.";
+        if (feedbackResponse?.error?.message) {
+          responseErrorMessage = feedbackResponse.error.message;
+        }
+        console.error("AI feedback failed:", feedbackResponse?.error);
+        throw new Error(responseErrorMessage);
+      }
 
-    //updating the data on puter storage with feedback
-    await kv.set(`resume:${uuid}`, JSON.stringify(data));
+      const feedbackText =
+        typeof feedbackResponse.message?.content === "string"
+          ? feedbackResponse.message.content
+          : feedbackResponse.message?.content?.[0]?.text ?? "";
 
-    //Status update
-    setStatusText("Analysis complete! Redirecting...");
-    console.log(data);
-    //redirecting to resume page with the uuid
-    navigate(`/resume/${uuid}`);
+      data.feedback = JSON.parse(feedbackText);
+      await kv.set(`resume:${uuid}`, JSON.stringify(data));
+
+      setStatusText("Analysis complete! Redirecting...");
+      console.log(data);
+      navigate(`/resume/${uuid}`);
+    } catch (error: unknown) {
+      let errorMessage = "An unknown error occurred. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      console.error("Error in handleAnalyze:", error);
+      setStatusText(`Error: ${errorMessage}`);
+      setIsProcessing(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Handle file upload logic here
-    const form = e.currentTarget.closest("form");
-    if (!form) return;
+    const form = e.currentTarget;
     const formData = new FormData(form);
     const companyName = formData.get("company-name")?.toString() || "";
     const jobTitle = formData.get("job-title")?.toString() || "";
     const jobDescription = formData.get("job-description")?.toString() || "";
 
-    if (!file) return;
+    if (!file) {
+      setStatusText("Error: No file selected.");
+      return;
+    }
 
     handleAnalyze({ companyName, jobTitle, jobDescription, file });
   };
+
   return (
     <main className="bg-[url('/images/bg-main.svg')] bg-no-repeat bg-cover">
       <Navbar />

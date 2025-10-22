@@ -1,36 +1,31 @@
-Resume Feedback Page.
+Resume Feedback Component
 
----
+## Changes Made Summary component
 
-Resume Feedback Page Integration - Explanation
+- Added the `Summary` component to display the summary of resume feedback.
+- The component takes in a `feedback` prop and renders the following sections:
+  - Overall Score: Displays the overall score of the resume using the `ScoreGauge` component.
+  - Score Categories: Displays the categories and scores for various aspects of the resume using the `Category` component.
+  - Summary: Displays the summary of the resume using the `feedback.summary` property.
+  - Strengths: Displays the strengths of the resume using the `feedback.strengths` property.
+  - Weaknesses: Displays the weaknesses of the resume using the `feedback.weaknesses` property.
+  - Final Recommendations: Displays the final recommendations for the resume using the `feedback.final_recommendations` property.
 
-1. New Route: `app/routes/resume.tsx`
-	- Added a new page to display detailed feedback for a specific resume upload, accessible via a dynamic route (e.g., `/resume/:id`).
-	- Fetches resume data (PDF, image, and AI feedback) from cloud storage and key-value storage using the unique resume ID.
-	- Uses Zustand's `usePuterStore` to access cloud storage (`fs`) and key-value store (`kv`).
-	- Loads and displays:
-	  - The uploaded resume as a PDF (with download/view link).
-	  - The generated image preview of the resume.
-	  - AI feedback, including summary, ATS score, and detailed suggestions.
-	- Redirects unauthenticated users to the login page.
 
-2. UI Components:
-	- Integrates three new/reused components for modular feedback display:
-	  - `Summary`: Shows a summary of the AI's feedback.
-	  - `ATS`: Displays the ATS (Applicant Tracking System) score and improvement tips.
-	  - `Details`: Provides detailed feedback and suggestions.
-	- These components receive the parsed feedback object as props and render the relevant sections.
+Details
+## Changes Made
 
-3. Data Flow:
-	- On mount, the page loads resume metadata from key-value storage (`kv.get('resume:{id}')`).
-	- Fetches the actual PDF and image files from cloud storage (`fs.read`).
-	- Parses and displays the AI feedback stored with the resume.
-	- Handles loading states and fallback UI (e.g., loading animation if feedback is not yet available).
-
-4. Navigation:
-	- Includes a navigation bar with a back button to return to the homepage.
-
-5. Purpose:
-	- This page allows users to review their uploaded resume, see a visual preview, and read actionable AI-powered feedback to improve their job application.
-
----
+- Added the `Details` component to display the detailed feedback for a resume.
+- The component takes in a `feedback` prop and renders the following sections:
+  - ATS Compatibility: Displays the feedback for the ATS compatibility aspect of the resume using the `feedback.ats_compatibility` property.
+  - Content Quality: Displays the feedback for the content quality aspect of the resume using the `feedback.content_quality` property.
+  - Format & Design: Displays the feedback for the format and design aspect of the resume using the `feedback.format_and_design` property.
+  - Work Experience: Displays the feedback for the work experience aspect of the resume using the `feedback.work_experience` property.
+  - Education: Displays the feedback for the education aspect of the resume using the `feedback.education` property.
+  - Skills: Displays the feedback for the skills aspect of the resume using the `feedback.skills` property.
+  - Relevance to Work: Displays the feedback for the relevance to work aspect of the resume using the `feedback.alignment_with_job` property.
+  - Strengths: Displays the strengths of the resume using the `feedback.strengths` property.
+  - Weaknesses: Displays the weaknesses of the resume using the `feedback.weaknesses` property.
+  - Improvement Suggestions: Displays the improvement suggestions for the resume using the `feedback.improvement_suggestions` property.
+  - Final Recommendations: Displays the final recommendations for the resume using the `feedback.final_recommendations` property.
+  - Summary: Displays the summary of the resume using the `feedback.summary` property.

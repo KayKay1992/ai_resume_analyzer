@@ -1,3 +1,10 @@
+import {type ClassValue, clsx} from "clsx";
+import {twMerge} from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 // Utility to format bytes as human-readable string
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
